@@ -84,6 +84,10 @@ void CFLR::solve()
     // 二元规则: result ::= left right
     std::vector<std::tuple<EdgeLabel, EdgeLabel, EdgeLabel>> binaryRules = {
         // PT rules
+        // PT rules - 添加正向规则
+        {EdgeLabelType::PT,     EdgeLabelType::VF,      EdgeLabelType::Addr},    // ✅ 添加
+        {EdgeLabelType::PT,     EdgeLabelType::Addr,    EdgeLabelType::VF},      // ✅ 添加
+        
         {EdgeLabelType::PT,     EdgeLabelType::VFBar,   EdgeLabelType::AddrBar},
         {EdgeLabelType::PTBar,  EdgeLabelType::Addr,    EdgeLabelType::VF},
         
@@ -109,10 +113,13 @@ void CFLR::solve()
         {EdgeLabelType::SVBar,  EdgeLabelType::VA,      EdgeLabelType::StoreBar},
         
         // PV and VP rules
-        {EdgeLabelType::PV,     EdgeLabelType::PTBar,   EdgeLabelType::VA},
+         // PV and VP rules - 修正
+        {EdgeLabelType::PV,     EdgeLabelType::PT,      EdgeLabelType::VA},      // ✅ 修正：PT而不是PTBar
         {EdgeLabelType::VP,     EdgeLabelType::VA,      EdgeLabelType::PT},
         
         // LV rules
+        // LV rules - 修正
+        {EdgeLabelType::LV,     EdgeLabelType::Load,    EdgeLabelType::VA},      // ✅ 修正：Load而不是LoadBar  
         {EdgeLabelType::LV,     EdgeLabelType::LoadBar, EdgeLabelType::VA},
     };
     
