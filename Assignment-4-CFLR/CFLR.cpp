@@ -23,6 +23,7 @@ int main(int argc, char **argv)
 
     CFLR solver;
     solver.buildGraph(pag);
+    // TODO: complete this method
     solver.solve();
     solver.dumpResult();
 
@@ -81,51 +82,37 @@ void CFLR::solve()
     };
     
     // 二元规则: result ::= left right
-    // 严格按照Lec04-48页的语法规则编写
     std::vector<std::tuple<EdgeLabel, EdgeLabel, EdgeLabel>> binaryRules = {
-        // PT ::= V̄F Addr
-        {EdgeLabelType::PT,     EdgeLabelType::VFBar,   EdgeLabelType::Addr},
-        // PT ::= Addr VF
-        {EdgeLabelType::PT,     EdgeLabelType::Addr,    EdgeLabelType::VF},
-        // P̄T ::= Ād̄dr VF
-        {EdgeLabelType::PTBar,  EdgeLabelType::AddrBar, EdgeLabelType::VF},
+        // PT rules
+        {EdgeLabelType::PT,     EdgeLabelType::VFBar,   EdgeLabelType::AddrBar},
+        {EdgeLabelType::PTBar,  EdgeLabelType::Addr,    EdgeLabelType::VF},
         
-        // VF ::= VF VF
+        // VF rules
         {EdgeLabelType::VF,     EdgeLabelType::VF,      EdgeLabelType::VF},
-        // VF ::= SV Load
         {EdgeLabelType::VF,     EdgeLabelType::SV,      EdgeLabelType::Load},
-        // VF ::= PV Load
         {EdgeLabelType::VF,     EdgeLabelType::PV,      EdgeLabelType::Load},
-        // VF ::= Store VP
         {EdgeLabelType::VF,     EdgeLabelType::Store,   EdgeLabelType::VP},
         
-        // V̄F ::= V̄F V̄F
+        // VFBar rules
         {EdgeLabelType::VFBar,  EdgeLabelType::VFBar,   EdgeLabelType::VFBar},
-        // V̄F ::= L̄oad SV
         {EdgeLabelType::VFBar,  EdgeLabelType::LoadBar, EdgeLabelType::SV},
-        // V̄F ::= L̄oad VP
         {EdgeLabelType::VFBar,  EdgeLabelType::LoadBar, EdgeLabelType::VP},
-        // V̄F ::= PV S̄tore
         {EdgeLabelType::VFBar,  EdgeLabelType::PV,      EdgeLabelType::StoreBar},
         
-        // VA ::= L̄V L̄oad
-        {EdgeLabelType::VA,     EdgeLabelType::LV,      EdgeLabelType::LoadBar},
-        // VA ::= V̄F VA
+        // VA rules
+        {EdgeLabelType::VA,     EdgeLabelType::LV,      EdgeLabelType::Load},
         {EdgeLabelType::VA,     EdgeLabelType::VFBar,   EdgeLabelType::VA},
-        // VA ::= VA VF
         {EdgeLabelType::VA,     EdgeLabelType::VA,      EdgeLabelType::VF},
         
-        // SV ::= Store VA
+        // SV and SVBar rules
         {EdgeLabelType::SV,     EdgeLabelType::Store,   EdgeLabelType::VA},
-        // S̄V ::= VA S̄tore
         {EdgeLabelType::SVBar,  EdgeLabelType::VA,      EdgeLabelType::StoreBar},
         
-        // PV ::= P̄T VA
+        // PV and VP rules
         {EdgeLabelType::PV,     EdgeLabelType::PTBar,   EdgeLabelType::VA},
-        // VP ::= VA PT
         {EdgeLabelType::VP,     EdgeLabelType::VA,      EdgeLabelType::PT},
         
-        // LV ::= L̄oad VA
+        // LV rules
         {EdgeLabelType::LV,     EdgeLabelType::LoadBar, EdgeLabelType::VA},
     };
     
