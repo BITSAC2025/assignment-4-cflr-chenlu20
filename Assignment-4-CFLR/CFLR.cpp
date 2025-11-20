@@ -122,11 +122,12 @@ void CFLR::solve()
         {EdgeLabelType::CopyBar, {EdgeLabelType::VFBar}},
     };
     
-    // 二元规则: result ::= left right
+        // 二元规则: result ::= left right
     std::vector<std::tuple<EdgeLabel, EdgeLabel, EdgeLabel>> binaryRules = {
-        // PT rules - 修正这两行！
-        {EdgeLabelType::PT,     EdgeLabelType::VFBar,   EdgeLabelType::Addr},     // 改：去掉Bar
-        {EdgeLabelType::PTBar,  EdgeLabelType::AddrBar, EdgeLabelType::VF},       // 改：加上Bar
+        // PT rules - 两条规则！
+        {EdgeLabelType::PT,     EdgeLabelType::VFBar,   EdgeLabelType::Addr},
+        {EdgeLabelType::PT,     EdgeLabelType::Addr,    EdgeLabelType::VF},      // ← 添加这条
+        {EdgeLabelType::PTBar,  EdgeLabelType::AddrBar, EdgeLabelType::VF},
         
         // VF rules
         {EdgeLabelType::VF,     EdgeLabelType::VF,      EdgeLabelType::VF},
@@ -134,14 +135,14 @@ void CFLR::solve()
         {EdgeLabelType::VF,     EdgeLabelType::PV,      EdgeLabelType::Load},
         {EdgeLabelType::VF,     EdgeLabelType::Store,   EdgeLabelType::VP},
         
-        // VFBar rules - 你这部分是对的
+        // VFBar rules
         {EdgeLabelType::VFBar,  EdgeLabelType::VFBar,   EdgeLabelType::VFBar},
         {EdgeLabelType::VFBar,  EdgeLabelType::LoadBar, EdgeLabelType::SV},
         {EdgeLabelType::VFBar,  EdgeLabelType::LoadBar, EdgeLabelType::VP},
         {EdgeLabelType::VFBar,  EdgeLabelType::PV,      EdgeLabelType::StoreBar},
         
-        // VA rules - 修正这行！
-        {EdgeLabelType::VA,     EdgeLabelType::LV,      EdgeLabelType::LoadBar},  // 改：Load改为LoadBar
+        // VA rules
+        {EdgeLabelType::VA,     EdgeLabelType::LV,      EdgeLabelType::LoadBar},
         {EdgeLabelType::VA,     EdgeLabelType::VFBar,   EdgeLabelType::VA},
         {EdgeLabelType::VA,     EdgeLabelType::VA,      EdgeLabelType::VF},
         
@@ -156,7 +157,7 @@ void CFLR::solve()
         // LV rules
         {EdgeLabelType::LV,     EdgeLabelType::LoadBar, EdgeLabelType::VA},
     };
-    
+        
     // 构建查找表
     std::unordered_map<EdgeLabel, std::vector<std::pair<EdgeLabel, EdgeLabel>>> leftRules;
     std::unordered_map<EdgeLabel, std::vector<std::pair<EdgeLabel, EdgeLabel>>> rightRules;
