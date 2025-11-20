@@ -74,12 +74,12 @@ void CFLR::solve()
         addEdgeIfAbsent(node, node, EdgeLabelType::VA);
     }
     
-    // // Step 4: 定义产生式规则
-    // // 单符号规则
-    // std::unordered_map<EdgeLabel, std::vector<EdgeLabel>> unaryRules{
-    //     {EdgeLabelType::Copy,    {EdgeLabelType::VF}},
-    //     {EdgeLabelType::CopyBar, {EdgeLabelType::VFBar}},
-    // };
+    // Step 4: 定义产生式规则
+    // 单符号规则
+    std::unordered_map<EdgeLabel, std::vector<EdgeLabel>> unaryRules{
+        {EdgeLabelType::Copy,    {EdgeLabelType::VF}},
+        {EdgeLabelType::CopyBar, {EdgeLabelType::VFBar}},
+    };
     
     // // 二元规则: result ::= left right
     // std::vector<std::tuple<EdgeLabel, EdgeLabel, EdgeLabel>> binaryRules = {
@@ -114,50 +114,43 @@ void CFLR::solve()
         
     //     // LV rules
     //     {EdgeLabelType::LV,     EdgeLabelType::LoadBar, EdgeLabelType::VA},
-    //};
-        // Step 4: 定义产生式规则
-    // 单符号规则
-    std::unordered_map<EdgeLabel, std::vector<EdgeLabel>> unaryRules{
-        {EdgeLabelType::Copy,    {EdgeLabelType::VF}},
-        {EdgeLabelType::CopyBar, {EdgeLabelType::VFBar}},
-    };
-    
-        // 二元规则: result ::= left right
+    // };
+    // 二元规则: result ::= left right
     std::vector<std::tuple<EdgeLabel, EdgeLabel, EdgeLabel>> binaryRules = {
-        // PT rules - 两条规则！
-        {EdgeLabelType::PT,     EdgeLabelType::VFBar,   EdgeLabelType::Addr},
-        {EdgeLabelType::PT,     EdgeLabelType::Addr,    EdgeLabelType::VF},      // ← 添加这条
-        {EdgeLabelType::PTBar,  EdgeLabelType::AddrBar, EdgeLabelType::VF},
+        // PT rules - 修改这里！
+        {EdgeLabelType::PT,     EdgeLabelType::VFBar,   EdgeLabelType::Addr},     // 改：去掉Bar
+        {EdgeLabelType::PTBar,  EdgeLabelType::AddrBar, EdgeLabelType::VF},       // 改：加上Bar
+        {EdgeLabelType::PT,     EdgeLabelType::Addr,    EdgeLabelType::VF},       // 新增：第二条PT规则
         
-        // VF rules
+        // VF rules - 保持不变
         {EdgeLabelType::VF,     EdgeLabelType::VF,      EdgeLabelType::VF},
         {EdgeLabelType::VF,     EdgeLabelType::SV,      EdgeLabelType::Load},
         {EdgeLabelType::VF,     EdgeLabelType::PV,      EdgeLabelType::Load},
         {EdgeLabelType::VF,     EdgeLabelType::Store,   EdgeLabelType::VP},
         
-        // VFBar rules
+        // VFBar rules - 保持不变（这部分已经是对的）
         {EdgeLabelType::VFBar,  EdgeLabelType::VFBar,   EdgeLabelType::VFBar},
         {EdgeLabelType::VFBar,  EdgeLabelType::LoadBar, EdgeLabelType::SV},
         {EdgeLabelType::VFBar,  EdgeLabelType::LoadBar, EdgeLabelType::VP},
         {EdgeLabelType::VFBar,  EdgeLabelType::PV,      EdgeLabelType::StoreBar},
         
-        // VA rules
-        {EdgeLabelType::VA,     EdgeLabelType::LV,      EdgeLabelType::LoadBar},
+        // VA rules - 保持不变（用Load是对的）
+        {EdgeLabelType::VA,     EdgeLabelType::LV,      EdgeLabelType::Load},
         {EdgeLabelType::VA,     EdgeLabelType::VFBar,   EdgeLabelType::VA},
         {EdgeLabelType::VA,     EdgeLabelType::VA,      EdgeLabelType::VF},
         
-        // SV and SVBar rules
+        // SV and SVBar rules - 保持不变
         {EdgeLabelType::SV,     EdgeLabelType::Store,   EdgeLabelType::VA},
         {EdgeLabelType::SVBar,  EdgeLabelType::VA,      EdgeLabelType::StoreBar},
         
-        // PV and VP rules
+        // PV and VP rules - 保持不变
         {EdgeLabelType::PV,     EdgeLabelType::PTBar,   EdgeLabelType::VA},
         {EdgeLabelType::VP,     EdgeLabelType::VA,      EdgeLabelType::PT},
         
-        // LV rules
+        // LV rules - 保持不变
         {EdgeLabelType::LV,     EdgeLabelType::LoadBar, EdgeLabelType::VA},
     };
-        
+    
     // 构建查找表
     std::unordered_map<EdgeLabel, std::vector<std::pair<EdgeLabel, EdgeLabel>>> leftRules;
     std::unordered_map<EdgeLabel, std::vector<std::pair<EdgeLabel, EdgeLabel>>> rightRules;
