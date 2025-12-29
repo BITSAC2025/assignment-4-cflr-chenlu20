@@ -201,7 +201,7 @@ int main(int argc, char **argv)
 
     SVFIRBuilder builder;
     auto pag = builder.build();
-    pag->dump();
+    pag->dump("PAG");
 
     CFLR solver;
     solver.buildGraph(pag);
@@ -214,86 +214,139 @@ int main(int argc, char **argv)
 
 void CFLR::solve()
 {
-    auto insertEdge = [&](unsigned from, unsigned to, EdgeLabel type) {
-        if (graph->hasEdge(from, to, type))
-            return;
-        
-        graph->addEdge(from, to, type);
-        workList.push(CFLREdge(from, to, type));
-        
-        if (type == PT && !graph->hasEdge(to, from, PTBar)) {
-            graph->addEdge(to, from, PTBar);
-            workList.push(CFLREdge(to, from, PTBar));
-        }
-        else if (type == Copy && !graph->hasEdge(to, from, CopyBar)) {
-            graph->addEdge(to, from, CopyBar);
-            workList.push(CFLREdge(to, from, CopyBar));
-        }
-    };
-
-    auto &succ = graph->getSuccessorMap();
-    auto &pred = graph->getPredecessorMap();
-
-    for (auto &[node, labelMap] : succ) {
-        for (auto &[label, targets] : labelMap) {
-            for (unsigned t : targets) {
-                workList.push(CFLREdge(node, t, label));
+    std::unordered_set<unsigned> nodes;
+    
+    for (auto &p : graph->getSuccessorMap()) {
+        nodes.insert(p.first);
+        for (auto &q : p.second) {
+            for (unsigned d : q.second) {
+                nodes.insert(d);
+                workList.push(CFLREdge(p.first, d, q.first));
             }
         }
     }
-
+    
+    auto tryAdd = [this](unsigned s, unsigned d, EdgeLabel l) {
+        if (!graph->hasEdge(s, d, l)) {
+            graph->addEdge(s, d, l);
+            workList.push(CFLREdge(s, d, l));
+        }
+    };
+    
+    for (unsigned n : nodes) {
+        tryAdd(n, n, VF);
+        tryAdd(n, n, VFBar);
+        tryAdd(n, n, VA);
+    }
+    
     while (!workList.empty()) {
         auto e = workList.pop();
-        unsigned a = e.src;
-        unsigned b = e.dst;
+        unsigned u = e.src, v = e.dst;
         EdgeLabel L = e.label;
-
-        if (L == AddrBar) {
-            insertEdge(a, b, PT);
+        
+        auto &S = graph->getSuccessorMap();
+        auto &P = graph->getPredecessorMap();
+        
+        if (L == VFBar) {
+            if (S.count(v) && S[v].count(AddrBar))
+                for (unsigned t : S[v][AddrBar]) tryAdd(u, t, PT);
+            if (S.count(v) && S[v].count(VA))
+                for (unsigned t : S[v][VA]) tryAdd(u, t, VA);
+            if (S.count(v) && S[v].count(VFBar))
+                for (unsigned t : S[v][VFBar]) tryAdd(u, t, VFBar);
         }
-
-        if (succ.count(b)) {
-            auto &bSucc = succ[b];
-            
-            if (L == CopyBar && bSucc.count(PT)) {
-                for (unsigned c : bSucc.at(PT))
-                    insertEdge(a, c, PT);
-            }
-            if (L == Store && bSucc.count(PT)) {
-                for (unsigned c : bSucc.at(PT))
-                    insertEdge(a, c, PV);
-            }
-            if (L == PTBar && bSucc.count(Load)) {
-                for (unsigned c : bSucc.at(Load))
-                    insertEdge(a, c, VP);
-            }
-            if (L == PV && bSucc.count(VP)) {
-                for (unsigned c : bSucc.at(VP))
-                    insertEdge(a, c, Copy);
-            }
+        
+        if (L == AddrBar && P.count(u) && P[u].count(VFBar))
+            for (unsigned t : P[u][VFBar]) tryAdd(t, v, PT);
+        
+        if (L == Addr) {
+            if (S.count(v) && S[v].count(VF))
+                for (unsigned t : S[v][VF]) tryAdd(u, t, PTBar);
         }
-
-        if (pred.count(a)) {
-            auto &aPred = pred[a];
-            
-            if (L == PT) {
-                if (aPred.count(CopyBar)) {
-                    for (unsigned p : aPred.at(CopyBar))
-                        insertEdge(p, b, PT);
-                }
-                if (aPred.count(Store)) {
-                    for (unsigned p : aPred.at(Store))
-                        insertEdge(p, b, PV);
-                }
-            }
-            if (L == Load && aPred.count(PTBar)) {
-                for (unsigned p : aPred.at(PTBar))
-                    insertEdge(p, b, VP);
-            }
-            if (L == VP && aPred.count(PV)) {
-                for (unsigned p : aPred.at(PV))
-                    insertEdge(p, b, Copy);
-            }
+        
+        if (L == VF) {
+            if (P.count(u) && P[u].count(Addr))
+                for (unsigned t : P[u][Addr]) tryAdd(t, v, PTBar);
+            if (S.count(v) && S[v].count(VF))
+                for (unsigned t : S[v][VF]) tryAdd(u, t, VF);
+            if (P.count(u) && P[u].count(VF))
+                for (unsigned t : P[u][VF]) tryAdd(t, v, VF);
+            if (P.count(u) && P[u].count(VA))
+                for (unsigned t : P[u][VA]) tryAdd(t, v, VA);
         }
+        
+        if (L == Copy) tryAdd(u, v, VF);
+        if (L == CopyBar) tryAdd(u, v, VFBar);
+        
+        if (L == SV && S.count(v) && S[v].count(Load))
+            for (unsigned t : S[v][Load]) tryAdd(u, t, VF);
+        if (L == PV && S.count(v) && S[v].count(Load))
+            for (unsigned t : S[v][Load]) tryAdd(u, t, VF);
+        if (L == Load) {
+            if (P.count(u) && P[u].count(SV))
+                for (unsigned t : P[u][SV]) tryAdd(t, v, VF);
+            if (P.count(u) && P[u].count(PV))
+                for (unsigned t : P[u][PV]) tryAdd(t, v, VF);
+            if (P.count(u) && P[u].count(LV))
+                for (unsigned t : P[u][LV]) tryAdd(t, v, VA);
+        }
+        
+        if (L == Store) {
+            if (S.count(v) && S[v].count(VP))
+                for (unsigned t : S[v][VP]) tryAdd(u, t, VF);
+            if (S.count(v) && S[v].count(VA))
+                for (unsigned t : S[v][VA]) tryAdd(u, t, SV);
+        }
+        if (L == VP && P.count(u) && P[u].count(Store))
+            for (unsigned t : P[u][Store]) tryAdd(t, v, VF);
+        
+        if (L == VFBar) {
+            if (P.count(u) && P[u].count(VFBar))
+                for (unsigned t : P[u][VFBar]) tryAdd(t, v, VFBar);
+        }
+        
+        if (L == LoadBar) {
+            if (S.count(v) && S[v].count(SVBar))
+                for (unsigned t : S[v][SVBar]) tryAdd(u, t, VFBar);
+            if (S.count(v) && S[v].count(VP))
+                for (unsigned t : S[v][VP]) tryAdd(u, t, VFBar);
+            if (S.count(v) && S[v].count(VA))
+                for (unsigned t : S[v][VA]) tryAdd(u, t, LV);
+        }
+        if (L == SVBar && P.count(u) && P[u].count(LoadBar))
+            for (unsigned t : P[u][LoadBar]) tryAdd(t, v, VFBar);
+        if (L == VP && P.count(u) && P[u].count(LoadBar))
+            for (unsigned t : P[u][LoadBar]) tryAdd(t, v, VFBar);
+        
+        if (L == PV && S.count(v) && S[v].count(StoreBar))
+            for (unsigned t : S[v][StoreBar]) tryAdd(u, t, VFBar);
+        if (L == StoreBar && P.count(u) && P[u].count(PV))
+            for (unsigned t : P[u][PV]) tryAdd(t, v, VFBar);
+        
+        if (L == LV && S.count(v) && S[v].count(Load))
+            for (unsigned t : S[v][Load]) tryAdd(u, t, VA);
+        
+        if (L == VA) {
+            if (P.count(u) && P[u].count(VFBar))
+                for (unsigned t : P[u][VFBar]) tryAdd(t, v, VA);
+            if (S.count(v) && S[v].count(VF))
+                for (unsigned t : S[v][VF]) tryAdd(u, t, VA);
+            if (P.count(u) && P[u].count(Store))
+                for (unsigned t : P[u][Store]) tryAdd(t, v, SV);
+            if (S.count(v) && S[v].count(StoreBar))
+                for (unsigned t : S[v][StoreBar]) tryAdd(u, t, SVBar);
+            if (P.count(u) && P[u].count(PTBar))
+                for (unsigned t : P[u][PTBar]) tryAdd(t, v, PV);
+            if (S.count(v) && S[v].count(PT))
+                for (unsigned t : S[v][PT]) tryAdd(u, t, VP);
+            if (P.count(u) && P[u].count(LoadBar))
+                for (unsigned t : P[u][LoadBar]) tryAdd(t, v, LV);
+        }
+        
+        if (L == PTBar && S.count(v) && S[v].count(VA))
+            for (unsigned t : S[v][VA]) tryAdd(u, t, PV);
+        
+        if (L == PT && P.count(u) && P[u].count(VA))
+            for (unsigned t : P[u][VA]) tryAdd(t, v, VP);
     }
 }
